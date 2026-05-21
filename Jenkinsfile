@@ -7,19 +7,27 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Build Docker Image') {
+
+        stage('Test') {
             steps {
-                echo 'Building Docker Image...'
-                sh 'docker build -t flask-cicd-app:latest .'
+                echo 'Running Python Syntax Test...'
+                sh 'python3 -m py_compile app.py'
             }
         }
-        stage('Deploy Container') {
+
+        stage('Build & Deploy') {
             steps {
-                echo 'Deploying Application...'
-                sh 'docker stop flask-app-container || true'
-                sh 'docker rm flask-app-container || true'
-                
-                sh 'docker run -d -p 5000:5000 --name flask-app-container flask-cicd-app:latest'
+                script {
+                    echo 'Building Docker Image...'
+                    def appImage = docker.build("flask-cicd-app:latest", ".")
+                    
+                    echo 'Stopping old container if exists...'
+                    sh 'docker stop flask-app-container || true'
+                    sh 'docker rm flask-app-container || true'
+                    
+                    echo 'Running new container...'
+                    appImage.run("-d -p 5000:5000 --name flask-app-container")
+                }
             }
         }
     }
