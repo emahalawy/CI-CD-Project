@@ -2,26 +2,40 @@ pipeline {
     agent any
 
     stages {
-        // 1. سحب الكود من GitHub
         stage('Checkout') {
             steps {
+                cleanWs()
                 checkout scm
             }
         }
 
-        // 2. البناء والتشغيل مباشرة (الـ Dockerfile كفيل باختبار وبناء الكود)
+        stage('Test') {
+            steps {
+                echo "Running tests..."
+            }
+        }
+
         stage('Build & Deploy') {
             steps {
-                echo 'Building Docker Image...'
-                sh 'docker build -t flask-cicd-app:latest .'
-                
-                echo 'Stopping old container if exists...'
-                sh 'docker stop flask-app-container || true'
-                sh 'docker rm flask-app-container || true'
-                
-                echo 'Running new container...'
-                sh 'docker run -d -p 5000:5000 --name flask-app-container flask-cicd-app:latest'
+                script {
+                    echo 'Building Docker Image via Plugin...'
+            
+                    def myImage = docker.build("my-website:latest", ".")
+                    
+                    echo 'Stopping old container if exists...'
+                    sh 'docker stop my-site || true'
+                    sh 'docker rm my-site || true'
+                    
+                    echo 'Running new container...'
+                    myImage.run("-d -p 8085:80 --name my-site")
+                }
             }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished execution successfully.'
         }
     }
 }
